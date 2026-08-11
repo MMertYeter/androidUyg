@@ -1,4 +1,4 @@
-name: Build Android APK
+name: Build Android APK (Auto-Detect)
 
 on:
   push:
@@ -20,21 +20,32 @@ jobs:
           distribution: 'temurin'
           cache: gradle
 
-      - name: Setup Gradle Wrapper and Grant Permissions
+      - name: Auto-Detect Project and Build
         run: |
-          cd android
-          # Eğer gradlew dosyası projede yoksa sistemdeki Gradle ile oluştur
+          # Android projesinin kök dizinini (settings.gradle dosyasının olduğu yeri) otomatik bul
+          ANDROID_DIR=$(dirname $(find . -name "settings.gradle*" -print -quit))
+          echo "Android projesi bulundu: $ANDROID_DIR"
+          
+          # Bulunan dizine geçiş yap
+          cd "$ANDROID_DIR"
+
+          # gradlew betiği eksikse sistem Gradle'ı ile otomatik oluştur
           if [ ! -f "gradlew" ]; then
+            echo "gradlew bulunamadı, oluşturuluyor..."
             gradle wrapper
           fi
-          # Çalıştırma iznini ver
-          chmod +x gradlew
 
-      - name: Build Debug APK
-        run: |
-          cd android
+          # Çalıştırma izni ver ve derlemeyi başlat
+          chmod +x gradlew
           ./gradlew assembleDebug
 
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: SyncListen-Debug-APK
+          # APK depodaki hangi alt klasörde üretilirse üretilsin otomatik bulup yükler
+          path: "**/build/outputs/apk/debug/*.apk"
+          
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
